@@ -94,3 +94,66 @@ export const userLogin = async (req, res) => {
     res.status(500).json({ message: error });
   }
 };
+
+export const curretUser = async (req, res) => {
+  try {
+    res
+      .status(200)
+      .json({ message: "logged in user fetched successfully", data: res.user });
+  } catch (error) {
+    res.status(500).json({ message: error });
+  }
+};
+
+// Algorithm for changing userName
+// check whether the user is logged in or not
+// if logged in take the req from req.body
+// check whether username already exist or not
+// if not change the username and save in db
+// query the user and sed success response
+export const changeUsername = async (req, res) => {
+  try {
+    const { userName, phoneNo } = req.body;
+    const userId = req.user._id;
+    const isExist = await User.findOne({ userName });
+    if (isExist) {
+      return res.status(400).json({ message: "User name already exist!" });
+    }
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { userName, phoneNo },
+
+      { new: true },
+    ).select("-password -refreshToken");
+    res
+      .status(200)
+      .json(
+        { message: "Username changed successfully!" },
+        { data: updatedUser },
+      );
+  } catch (error) {
+    console.log("Error while changing username", error);
+    res.status(500).json({ message: error });
+  }
+};
+
+export const updateProfilePic = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        profilePic: `public/uploads${req.file.filename}`,
+      },
+      { new: true },
+    ).select("-password -refreshToken");
+    res
+      .status(200)
+      .json(
+        { message: "Profile picture updated successfully" },
+        { data: user },
+      );
+  } catch (error) {
+    res.status(500).json({ message: error });
+  }
+};
