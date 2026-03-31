@@ -1,3 +1,4 @@
+import { uploadToCloudinary } from "../../utils/cloudinary.utils.js";
 import { User } from "../models/user.model.js";
 
 const generateAccessAndRefreshToken = async (user) => {
@@ -104,7 +105,62 @@ export const curretUser = async (req, res) => {
     res.status(500).json({ message: error });
   }
 };
+//Algorithm for user log out
+//check user logged in
+//remove the refresh token from db
+//clear the access token and refresh token in cookie
 
+export const logout = async (req, res) => {
+  try {
+    req.user.refreshToken = undefined;
+    await req.user.save();
+    const options = {
+      httpOnly: false,
+      secure: false,
+    };
+    res
+      .status(200)
+      .clearCookie("accessToken", options)
+      .clearCookie("refreshToken", options)
+      .json({ message: "User logged out successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+//Algorithm for changing password
+//check if user is logged in
+//take the old password and new password from the client (req.body)
+//check if both fields are provided
+//check if old password is correct
+//replace old password with new password
+
+export const changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({
+        message: "Both old and new password are required",
+      });
+    }
+    const isPasswordValid = await req.user.isPasswordCorrect(oldPassword);
+    if (!isPasswordValid) {
+      return res.status(400).json({
+        message: "Invalid credentials",
+      });
+    }
+    req.user.password = newPassword;
+    await req.user.save();
+
+    res.status(200).json({
+      message: "Password change successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
 // Algorithm for changing userName
 // check whether the user is logged in or not
 // if logged in take the req from req.body
@@ -137,16 +193,45 @@ export const changeUsername = async (req, res) => {
   }
 };
 
+// export const updateProfilePic = async (req, res) => {
+//   try {
+//     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+//     const user = await User.findByIdAndUpdate(
+//       req.user._id,
+//       {
+//         profilePic: `public/uploads${req.file.filename}`,
+//       },
+//       { new: true },
+//     ).select("-password -refreshToken");
+//     res
+//       .status(200)
+//       .json(
+//         { message: "Profile picture updated successfully" },
+//         { data: user },
+//       );
+//   } catch (error) {
+//     res.status(500).json({ message: error });
+//   }
+// };
+
 export const updateProfilePic = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+    console.log("req.fil buffer", req.file.buffer);
+    const profilePicUrl = await uploadToCloudinary(
+      req.file.buffer,
+      "profilePic",
+    );
+    console.log(profilePicUrl);
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      {
-        profilePic: `public/uploads${req.file.filename}`,
-      },
+      { profilePic: profilePicUrl.secure_url },
       { new: true },
     ).select("-password -refreshToken");
+    if (!user) {
+      return res.status(404).json({ message: "User not found " });
+    }
     res
       .status(200)
       .json(
@@ -154,6 +239,7 @@ export const updateProfilePic = async (req, res) => {
         { data: user },
       );
   } catch (error) {
+    console.log("error", error);
     res.status(500).json({ message: error });
   }
 };

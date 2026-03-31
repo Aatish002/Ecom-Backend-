@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import connectDB from "./db/index.js";
 import authRoutes from "./routes/user.route.js";
 import cookieParser from "cookie-parser";
+import productRoutes from "./routes/product.routes.js";
 dotenv.config();
 
 const app = express();
@@ -18,6 +19,8 @@ app.use(express.urlencoded());
 app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
+
+app.use("/api/product", productRoutes);
 
 connectDB()
   .then(() =>

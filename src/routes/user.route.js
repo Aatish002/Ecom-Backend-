@@ -1,7 +1,9 @@
 import { Router } from "express";
 import {
+  changePassword,
   changeUsername,
   curretUser,
+  logout,
   register,
   updateProfilePic,
   userLogin,
@@ -18,9 +20,11 @@ router
   .post(validateRequest(registerValidationSchema), register);
 router.route("/login").post(userLogin);
 router.route("/me").get(verifyToken, curretUser);
-router.route("/me/changeUserName").patch(verifyToken, changeUsername);
+router.route("/logout").patch(verifyToken, logout);
+router.route("/change-password").patch(verifyToken, changePassword);
+router.route("/change-user-name").patch(verifyToken, changeUsername);
 router
-  .route("/me/profilePic")
+  .route("/profile-pic")
   .patch(verifyToken, upload.single("profilePic"), updateProfilePic);
 
 export default router;
