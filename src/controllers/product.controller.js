@@ -1,6 +1,8 @@
 import { Product } from "../models/product.model.js";
-import { uploadToCloudinary } from "../../utils/cloudinary.utils.js";
-import { json } from "express";
+import {
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from "../../utils/cloudinary.utils.js";
 
 //Alogrithm for adding product
 //take the input from req.body {name, description,image,price,categories}
@@ -51,12 +53,91 @@ export const addProduct = async (req, res) => {
 export const removeProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await Product.findByIdAndDelete(id);
+    const product = await Product.findById(id);
     if (!product) {
       return res.status(404).json({ message: "product not found " });
     }
+    if (product.imagePublicId) {
+      await deleteFromCloudinary(product.imagePublicId);
+    }
+    await product.deleteOne();
 
-    res.status(200).json({ message: "product removed successfully " });
+    return res.status(200).json({ message: "product removed successfully " });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+//Algorithm for getting product
+//check whether the product exist or not
+//if exist fetch the product from db
+//query the fetched product to user
+//send success response
+
+export const fetchProduct = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found!" });
+    }
+    return res
+      .status(200)
+      .json({ message: "product fetched successfully ", data: product });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+//Algorithm for changing product ingormation
+//check if the user is logged in or no
+//check if the product exist or not
+//take the details from user
+//update the details and save in db
+//query the saved product
+//send success response
+
+export const updateProduct = async (req, res) => {
+  try {
+    const { name, description, price, categories } = req.body;
+    const productId = req.params.id;
+
+    const product = await Product.findById(productId);
+
+    if (!product) {
+      return res.status(404).json({ message: "product does not exist!" });
+    }
+
+    let updateData = {
+      name,
+      description,
+      price,
+      categories,
+    };
+
+    if (req.file) {
+      if (product.imagePublicId) {
+        await deleteFromCloudinary(product.imagePublicId);
+      }
+
+      const uploadResult = await uploadToCloudinary(
+        req.file.buffer,
+        "profilePic",
+      );
+
+      updateData.image = uploadResult.secure_url;
+      updateData.imagePublicId = uploadResult.public_id;
+    }
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      productId,
+      updateData,
+      { new: true },
+    );
+
+    res.status(200).json({
+      message: "Product updated successfully",
+      data: updatedProduct,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

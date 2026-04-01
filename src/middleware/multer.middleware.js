@@ -1,5 +1,4 @@
 import multer from "multer";
-import path from "path";
 
 // const uploadPath = path.join(process.cwd(), "public/uploads");
 
