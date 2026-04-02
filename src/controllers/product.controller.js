@@ -14,7 +14,7 @@ import {
 
 export const addProduct = async (req, res) => {
   try {
-    const { name, description, image, price, categories } = req.body;
+    const { name, description, image, price, Categories } = req.body;
     if (!req.file) {
       return res.status(400).json({ message: "Image is required" });
     }
@@ -27,7 +27,7 @@ export const addProduct = async (req, res) => {
       name,
       description,
       price,
-      categories,
+      Categories,
       image: uploadResult.secure_url,
       imagePublicId: uploadResult.public_id,
     });
@@ -50,7 +50,7 @@ export const addProduct = async (req, res) => {
 //delete the product from db
 //send success response
 
-export const removeProduct = async (req, res) => {
+export const removeOneProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const product = await Product.findById(id);
@@ -74,7 +74,7 @@ export const removeProduct = async (req, res) => {
 //query the fetched product to user
 //send success response
 
-export const fetchProduct = async (req, res) => {
+export const fetchProductOne = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) {
@@ -96,7 +96,7 @@ export const fetchProduct = async (req, res) => {
 //query the saved product
 //send success response
 
-export const updateProduct = async (req, res) => {
+export const updateOneProduct = async (req, res) => {
   try {
     const { name, description, price, categories } = req.body;
     const productId = req.params.id;
@@ -137,6 +137,38 @@ export const updateProduct = async (req, res) => {
     res.status(200).json({
       message: "Product updated successfully",
       data: updatedProduct,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+//Algorithm for fetching multiple products
+//
+
+export const fetchProduct = async (req, res) => {
+  try {
+    let perPage = parseInt(req.query.perPage) || 5;
+    let page = parseInt(req.query.page) || 1;
+    let categoryFromUrl = req.query.category;
+    let productFilter = {};
+    if (categoryFromUrl) {
+      productFilter.Categories = categoryFromUrl;
+    }
+    const products = await Product.find(productFilter)
+      .skip((page - 1) * perPage)
+      .limit(perPage);
+
+    const totalItems = await Product.countDocuments(productFilter);
+    res.status(200).json({
+      success: true,
+      data: products,
+      pagination: {
+        currentPage: page,
+        perPage: perPage,
+        totalItems: totalItems,
+        totalPages: Math.ceil(totalItems / perPage),
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

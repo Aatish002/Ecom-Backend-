@@ -1,4 +1,7 @@
-import { uploadToCloudinary } from "../../utils/cloudinary.utils.js";
+import {
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from "../../utils/cloudinary.utils.js";
 import { User } from "../models/user.model.js";
 
 const generateAccessAndRefreshToken = async (user) => {
@@ -45,7 +48,7 @@ export const register = async function (req, res) {
   } catch (error) {
     console.log("ERROR WHILE REGISTERING", error);
     res.status(500).json({
-      message: error,
+      message: error.message,
     });
   }
 };
@@ -92,7 +95,7 @@ export const userLogin = async (req, res) => {
       });
   } catch (error) {
     console.log("Error while logging in:", error);
-    res.status(500).json({ message: error });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -100,9 +103,9 @@ export const curretUser = async (req, res) => {
   try {
     res
       .status(200)
-      .json({ message: "logged in user fetched successfully", data: res.user });
+      .json({ message: "logged in user fetched successfully", data: req.user });
   } catch (error) {
-    res.status(500).json({ message: error });
+    res.status(500).json({ message: error.message });
   }
 };
 //Algorithm for user log out
@@ -189,7 +192,7 @@ export const changeUsername = async (req, res) => {
       );
   } catch (error) {
     console.log("Error while changing username", error);
-    res.status(500).json({ message: error });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -210,7 +213,7 @@ export const changeUsername = async (req, res) => {
 //         { data: user },
 //       );
 //   } catch (error) {
-//     res.status(500).json({ message: error });
+//     res.status(500).json({ message: error.message });
 //   }
 // };
 
@@ -219,6 +222,10 @@ export const updateProfilePic = async (req, res) => {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
     console.log("req.fil buffer", req.file.buffer);
+    console.log(req.user.profilePicPublicId);
+    if (req.user.profilePicPublicId) {
+      await deleteFromCloudinary(req.user.profilePicPublicId);
+    }
     const profilePicUrl = await uploadToCloudinary(
       req.file.buffer,
       "profilePic",
@@ -226,7 +233,11 @@ export const updateProfilePic = async (req, res) => {
     console.log(profilePicUrl);
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { profilePic: profilePicUrl.secure_url },
+      {
+        profilePic: profilePicUrl.secure_url,
+        profilePicPublicId: profilePicUrl.public_id,
+      },
+
       { new: true },
     ).select("-password -refreshToken");
     if (!user) {
@@ -240,6 +251,6 @@ export const updateProfilePic = async (req, res) => {
       );
   } catch (error) {
     console.log("error", error);
-    res.status(500).json({ message: error });
+    res.status(500).json({ message: error.message });
   }
 };
